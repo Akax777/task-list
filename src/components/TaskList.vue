@@ -1,18 +1,35 @@
 <template>
-  <div class="space-y-2">
-    <TaskInput />
-    <div v-if="!tasks.length" class="text-gray-500">No tasks yet</div>
-    <TaskItem v-for="task in tasks" :key="task.id" :task="task" />
+  <div class="space-y-2 mt-4">
+    <TaskItem
+      v-for="(task, index) in tasks"
+      :key="index"
+      :task="task"
+      @toggle-complete="toggleComplete(index)"
+      @delete-task="deleteTask(index)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import TaskInput from './TaskInput.vue'
 import TaskItem from './TaskItem.vue'
-import { useTaskStore } from '@/stores/taskStore'
 
-const store = useTaskStore()
-const tasks = store.tasks
+defineProps({
+  tasks: {
+    type: Array as () => Array<{
+      text: string
+      completed: boolean
+    }>,
+    required: true,
+  },
+})
 
-store.fetchTasks()
+const emit = defineEmits(['toggle-complete', 'delete-task'])
+
+const toggleComplete = (index: number) => {
+  emit('toggle-complete', index)
+}
+
+const deleteTask = (index: number) => {
+  emit('delete-task', index)
+}
 </script>

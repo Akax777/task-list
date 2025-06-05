@@ -1,10 +1,29 @@
 <template>
-  <main class="max-w-xl mx-auto bg-white shadow-lg rounded-xl p-6">
-    <h1 class="text-2xl font-bold mb-4">Task List</h1>
-    <TaskList />
-  </main>
+  <div class="p-6 w-full">
+    <TaskInput @add-task="addTask" />
+    <TaskList :tasks="tasks" @toggle-complete="toggleComplete" @delete-task="deleteTask" />
+  </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import TaskInput from '@/components/TaskInput.vue'
 import TaskList from '@/components/TaskList.vue'
+
+const tasks = ref<Array<{ text: string; completed: boolean }>>([])
+
+const addTask = (text: string) => {
+  tasks.value.unshift({
+    text,
+    completed: false,
+  })
+}
+
+const toggleComplete = (index: number) => {
+  tasks.value[index].completed = !tasks.value[index].completed
+}
+
+const deleteTask = (index: number) => {
+  tasks.value.splice(index, 1)
+}
 </script>
