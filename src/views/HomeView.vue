@@ -1,29 +1,21 @@
 <template>
   <div class="p-6 w-full">
-    <TaskInput @add-task="addTask" />
-    <TaskList :tasks="tasks" @toggle-complete="toggleComplete" @delete-task="deleteTask" />
+    <TaskInput />
+    <TaskList />
+    <TaskActions />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import TaskInput from '@/components/TaskInput.vue'
 import TaskList from '@/components/TaskList.vue'
+import TaskActions from '@/components/TaskAction.vue'
+import { onMounted } from 'vue'
+import { useAuthStore } from '@/stores/authStore'
 
-const tasks = ref<Array<{ text: string; completed: boolean }>>([])
+const auth = useAuthStore()
 
-const addTask = (text: string) => {
-  tasks.value.unshift({
-    text,
-    completed: false,
-  })
-}
-
-const toggleComplete = (index: number) => {
-  tasks.value[index].completed = !tasks.value[index].completed
-}
-
-const deleteTask = (index: number) => {
-  tasks.value.splice(index, 1)
-}
+onMounted(() => {
+  auth.initialize()
+})
 </script>

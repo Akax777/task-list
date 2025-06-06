@@ -1,12 +1,15 @@
 <template>
-  <div class="flex items-center gap-2 p-2 hover:bg-gray-50 rounded">
-    <!-- Checkbox de completado -->
+  <div
+    class="flex items-center gap-3 px-5 py-4 pt-5 h-13"
+    :class="isEditing ? 'shadow' : null"
+    @click="startEditing"
+  >
     <button
-      @click="$emit('toggle-complete')"
-      class="w-5 h-5 rounded-full border flex items-center justify-center transition-colors"
+      @click.stop="toggleComplete"
+      class="w-6 h-6 border flex items-center justify-center transition-colors rounded-sm"
       :class="{
         'border-blue-500 bg-blue-500 text-white': task.completed,
-        'border-gray-300': !task.completed,
+        'border-gray-400': !task.completed,
       }"
     >
       <svg
@@ -25,50 +28,96 @@
       </svg>
     </button>
 
-    <!-- Texto de la tarea -->
     <span
+      v-if="!isEditing"
       class="flex-1"
       :class="{
         'line-through text-gray-400': task.completed,
-        'text-gray-800': !task.completed,
+        'tracking-wide text-lg': !task.completed,
       }"
     >
       {{ task.text }}
     </span>
 
-    <!-- Botón de eliminar -->
-    <button
-      @click="$emit('delete-task')"
-      class="text-gray-400 hover:text-red-500 transition-colors"
+    <input
+      v-else
+      v-model="editableText"
+      @blur="handleBlur"
+      @keydown.enter="confirmEdit"
+      class="flex-1 outline-none tracking-wide text-lg"
+    />
+    <div
+      v-if="isEditing"
+      class="transform w-8 h-8 rounded-full bg-gray-300 overflow-hidden transition-opacity duration-300"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
+      <img
+        v-if="auth.user?.avatar"
+        :src="auth.user.avatar"
+        :alt="auth.user.name"
+        class="w-8 h-8 rounded-full object-cover"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps({
+import { computed, ref } from 'vue'
+import { useTaskStore } from '@/stores/taskStore'
+import { useAuthStore } from '@/stores/authStore'
+import { storeToRefs } from 'pinia'
+
+const props = defineProps({
   task: {
     type: Object as () => {
+      id: string
       text: string
       completed: boolean
+      createdAt: Date
     },
     required: true,
   },
 })
 
-defineEmits(['toggle-complete', 'delete-task'])
+const taskStore = useTaskStore()
+const auth = useAuthStore()
+
+const isEditing = computed(() => taskStore.editingTaskId === props.task.id)
+const { editableText } = storeToRefs(taskStore)
+
+const inputRef = ref<HTMLInputElement | null>(null)
+
+const toggleComplete = () => {
+  taskStore.toggleComplete(props.task.id)
+  taskStore.clearEditing()
+}
+
+const deleteTask = () => {
+  taskStore.deleteTask(props.task.id)
+}
+
+const startEditing = () => {
+  editableText.value = props.task.text
+  taskStore.setEditingTask(props.task.id)
+}
+
+const handleBlur = (event: FocusEvent) => {
+  const relatedTarget = event.relatedTarget as Node | null
+
+  // Verifica si el nuevo foco está fuera del componente
+  if (inputRef.value && !inputRef.value.contains(relatedTarget)) {
+    cancelEdit()
+  }
+}
+
+const cancelEdit = () => {
+  editableText.value = props.task.text // Restaura el valor original
+  taskStore.clearEditing()
+}
+
+const confirmEdit = () => {
+  if (editableText.value.trim() && editableText.value !== props.task.text) {
+    taskStore.updateTask(props.task.id, { text: editableText.value.trim() })
+  }
+  taskStore.clearEditing()
+}
 </script>

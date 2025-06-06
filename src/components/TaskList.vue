@@ -1,35 +1,14 @@
 <template>
-  <div class="space-y-2 mt-4">
-    <TaskItem
-      v-for="(task, index) in tasks"
-      :key="index"
-      :task="task"
-      @toggle-complete="toggleComplete(index)"
-      @delete-task="deleteTask(index)"
-    />
+  <div class="space-y-2">
+    <TaskItem v-for="task in tasks" :key="task.id" :task="task" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import TaskItem from './TaskItem.vue'
+import { useTaskStore } from '@/stores/taskStore'
 
-defineProps({
-  tasks: {
-    type: Array as () => Array<{
-      text: string
-      completed: boolean
-    }>,
-    required: true,
-  },
-})
-
-const emit = defineEmits(['toggle-complete', 'delete-task'])
-
-const toggleComplete = (index: number) => {
-  emit('toggle-complete', index)
-}
-
-const deleteTask = (index: number) => {
-  emit('delete-task', index)
-}
+const taskStore = useTaskStore()
+const tasks = computed(() => taskStore.tasks)
 </script>

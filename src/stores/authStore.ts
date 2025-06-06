@@ -23,7 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = {
         id: 'usr_123',
         name: 'Usuario Demo',
-        avatar: `https://i.pravatar.cc/150?u=usr_123`, // Avatar único basado en ID
+        avatar: `https://i.pravatar.cc/150?u=usr_12`, // Avatar único basado en ID
       }
 
       // Simulamos persistencia en localStorage
