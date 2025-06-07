@@ -12,40 +12,33 @@
         'border-gray-400': !task.completed,
       }"
     >
-      <svg
-        v-if="task.completed"
-        xmlns="http://www.w3.org/2000/svg"
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
+      <CheckIcon v-if="task.completed" />
     </button>
 
-    <span
-      v-if="!isEditing"
-      class="flex-1"
-      :class="{
-        'line-through text-gray-400': task.completed,
-        'tracking-wide text-lg': !task.completed,
-      }"
-    >
-      {{ task.text }}
-    </span>
+    <div v-if="!isEditing" class="flex-1">
+      <div
+        class="task-text"
+        :class="{
+          'line-through text-gray-400': task.completed,
+          'tracking-wide text-lg': !task.completed,
+        }"
+        v-html="parsedDisplayText"
+      ></div>
+    </div>
 
-    <input
-      v-else
-      v-model="editableText"
-      @blur="handleBlur"
-      @keydown.enter="confirmEdit"
-      class="flex-1 outline-none tracking-wide text-lg"
-    />
+    <div v-else class="relative flex-1 flex items-center">
+      <div class="relative h-[40px] flex-grow">
+        <input
+          v-model="editableText"
+          @blur="handleBlur"
+          @keydown.enter="confirmEdit"
+          class="w-full h-full bg-transparent text-transparent caret-blue-500 outline-none text-lg absolute left-0"
+          ref="inputRef"
+        />
+        <div class="absolute w-full h-full pointer-events-none text-lg" v-html="editableHtml"></div>
+      </div>
+    </div>
+
     <div
       v-if="isEditing"
       class="transform w-8 h-8 rounded-full bg-gray-300 overflow-hidden transition-opacity duration-300"
@@ -65,6 +58,8 @@ import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import { useAuthStore } from '@/stores/authStore'
 import { storeToRefs } from 'pinia'
+import { useTextParser } from '@/composables/useTextParser'
+import CheckIcon from './icons/CheckIcon.vue'
 
 const props = defineProps({
   task: {
@@ -78,13 +73,19 @@ const props = defineProps({
   },
 })
 
+const { parseDisplayText, parseEditableText } = useTextParser()
 const taskStore = useTaskStore()
 const auth = useAuthStore()
 
 const isEditing = computed(() => taskStore.editingTaskId === props.task.id)
 const { editableText } = storeToRefs(taskStore)
-
 const inputRef = ref<HTMLInputElement | null>(null)
+
+// Texto parseado para visualización normal
+const parsedDisplayText = computed(() => parseDisplayText(props.task.text))
+
+// Texto parseado para modo edición
+const editableHtml = computed(() => parseEditableText(editableText.value))
 
 const toggleComplete = () => {
   taskStore.toggleComplete(props.task.id)
@@ -101,23 +102,34 @@ const startEditing = () => {
 }
 
 const handleBlur = (event: FocusEvent) => {
-  const relatedTarget = event.relatedTarget as Node | null
-
-  // Verifica si el nuevo foco está fuera del componente
-  if (inputRef.value && !inputRef.value.contains(relatedTarget)) {
-    cancelEdit()
+  const relatedTarget = event.relatedTarget as HTMLElement
+  if (relatedTarget?.closest('.task-action-container')) {
+    return
   }
+  cancelEdit()
 }
 
 const cancelEdit = () => {
-  editableText.value = props.task.text // Restaura el valor original
+  editableText.value = props.task.text
   taskStore.clearEditing()
 }
 
 const confirmEdit = () => {
   if (editableText.value.trim() && editableText.value !== props.task.text) {
-    taskStore.updateTask(props.task.id, { text: editableText.value.trim() })
+    const metadata = {
+      rawText: editableText.value,
+      categories: [...new Set(editableText.value.match(/#(\w+)/g) || [])],
+      users: [...new Set(editableText.value.match(/@(\w+)/g) || [])],
+      emails: [...new Set(editableText.value.match(/(\S+@\S+\.\S+)/g) || [])],
+      urls: [...new Set(editableText.value.match(/(https?:\/\/[^\s]+)/g) || [])],
+    }
+
+    taskStore.updateTask(props.task.id, {
+      text: editableText.value.trim(),
+      metadata,
+    })
+  } else {
+    taskStore.clearEditing()
   }
-  taskStore.clearEditing()
 }
 </script>

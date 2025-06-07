@@ -2,6 +2,22 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 
+interface TaskMetadata {
+  rawText: string
+  categories: string[]
+  users: string[]
+  emails: string[]
+  urls: string[]
+}
+
+interface Task {
+  id: string
+  text: string
+  completed: boolean
+  createdAt: Date
+  metadata: TaskMetadata // Añadir este campo
+}
+
 export const useTaskStore = defineStore('tasks', () => {
   // Estado
   const tasks = ref<
@@ -13,7 +29,8 @@ export const useTaskStore = defineStore('tasks', () => {
     }>
   >([])
 
-  const taskText = ref('')
+  const rawText = ref('')
+  const displayHtml = ref('')
   const isInputFocused = ref(false)
   const editingTask = ref<{
     id: string
@@ -23,23 +40,37 @@ export const useTaskStore = defineStore('tasks', () => {
   } | null>(null)
 
   const editingTaskId = ref<string | null>(null)
+  const editableText = ref('')
+  watch(editableText, (newVal) => {
+    console.log('editableText changed in store:', newVal)
+  })
 
   // Getters
   const hasTasks = computed(() => tasks.value.length > 0)
   const completedTasks = computed(() => tasks.value.filter((task) => task.completed))
   const pendingTasks = computed(() => tasks.value.filter((task) => !task.completed))
   const hasText = computed(() => !!editingTask.value?.text || false)
-  const editableText = ref('')
 
   // Actions
-  function addTask(text: string) {
+  function addTask(text: string, metadata?: TaskMetadata) {
     const newTask = {
       id: Date.now().toString(),
       text,
       completed: false,
       createdAt: new Date(),
+      metadata: metadata || {
+        rawText: text,
+        categories: [],
+        users: [],
+        emails: [],
+        urls: [],
+      },
     }
     tasks.value.unshift(newTask)
+    displayHtml.value = ''
+    rawText.value = ''
+    isInputFocused.value = false
+    editingTask.value = null
   }
 
   function deleteTask(id: string) {
@@ -56,26 +87,42 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  // En el TaskStore.ts, modifica la función updateTask
   function updateTask(
     id: string,
     updates: Partial<{
       text: string
       completed: boolean
+      metadata: TaskMetadata
     }>,
   ) {
     const task = tasks.value.find((t) => t.id === id)
     if (task) {
-      Object.assign(task, updates)
+      const metadata = updates.metadata || {
+        rawText: updates.text || task.text,
+        categories: [...new Set((updates.text || task.text).match(/#(\w+)/g) || [])],
+        users: [...new Set((updates.text || task.text).match(/@(\w+)/g) || [])],
+        emails: [...new Set((updates.text || task.text).match(/(\S+@\S+\.\S+)/g) || [])],
+        urls: [...new Set((updates.text || task.text).match(/(https?:\/\/[^\s]+)/g) || [])],
+      }
+
+      Object.assign(task, {
+        ...updates,
+        metadata,
+      })
     }
     clearEditing()
   }
-
   function setEditingTask(id: string) {
     editingTaskId.value = id
   }
 
   function clearEditing() {
+    rawText.value = ''
+    displayHtml.value = ''
+    editingTask.value = null
     editingTaskId.value = null
+    isInputFocused.value = false
   }
 
   function setInputFocus(focused: boolean) {
@@ -83,6 +130,30 @@ export const useTaskStore = defineStore('tasks', () => {
     if (!focused && !editingTask.value) {
       clearEditing()
     }
+  }
+
+  function updateText(newText: string) {
+    rawText.value = newText
+    displayHtml.value = parseText(newText) // Necesitarás implementar parseText
+  }
+
+  function parseText(text: string): string {
+    // Implementa tu lógica de parseo aquí (similar a la que tenías en el componente)
+    const words = text.split(/(\s+)/)
+
+    const processedWords = words.map((word) => {
+      if (word.trim().length > 0) {
+        if (/^#\w+/.test(word)) return `<span class="text-category">${word}</span>`
+        if (/^@\w+/.test(word)) return `<span class="text-user">${word}</span>`
+        if (/^[\w.%+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(word))
+          return `<span class="text-email">${word}</span>`
+        if (/^(https?:\/\/)?[\w.-]+\.[a-zA-Z]{2,}(\/\S*)?$/.test(word))
+          return `<span class="text-url">${word}</span>`
+      }
+      return word
+    })
+
+    return processedWords.join('')
   }
 
   // Sincronizar cuando se enfoca el input (TaskInput)
@@ -96,17 +167,10 @@ export const useTaskStore = defineStore('tasks', () => {
   watch(editingTaskId, (newId) => {
     if (newId !== null) {
       isInputFocused.value = false
-      taskText.value = ''
+      rawText.value = ''
+      displayHtml.value = ''
     }
   })
-
-  watch(
-    tasks,
-    (newTasks) => {
-      console.log('[STORE] Tareas actualizadas:', newTasks)
-    },
-    { deep: true },
-  )
 
   return {
     // State
@@ -114,7 +178,8 @@ export const useTaskStore = defineStore('tasks', () => {
     isInputFocused,
     editingTask,
     editingTaskId,
-    taskText,
+    rawText,
+    displayHtml,
     editableText,
 
     // Getters
@@ -128,8 +193,10 @@ export const useTaskStore = defineStore('tasks', () => {
     deleteTask,
     toggleComplete,
     updateTask,
+    updateText,
     setEditingTask,
     clearEditing,
     setInputFocus,
+    parseText,
   }
 })

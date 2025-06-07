@@ -5,7 +5,7 @@
     enter-from-class="opacity-0 translate-y-2"
     leave-to-class="opacity-0 translate-y-2"
   >
-    <div v-if="isVisible" class="flex justify-between shadow px-2 py-2">
+    <div v-if="isVisible" class="flex justify-between shadow px-2 py-2 task-action-container">
       <div class="flex gap-2">
         <button
           v-for="(btn, idx) in actionButtons"
@@ -51,10 +51,10 @@ import { useTaskStore } from '@/stores/taskStore'
 import { storeToRefs } from 'pinia'
 
 const taskStore = useTaskStore()
-const { taskText } = storeToRefs(taskStore)
+const { rawText, editableText } = storeToRefs(taskStore)
 
 const isVisible = computed(() => taskStore.isInputFocused || taskStore.editingTaskId)
-const hasText = computed(() => taskStore.taskText || taskStore.editingTaskId)
+const hasText = computed(() => taskStore.rawText || taskStore.editingTaskId)
 const actionText = computed(() => (taskStore.editingTaskId ? 'Update' : 'Add'))
 
 const actionButtons = [
@@ -90,21 +90,27 @@ const cancel = () => {
 }
 
 const confirm = () => {
-  if (!hasText.value) return
+  const textToUse = taskStore.editingTaskId ? editableText.value : rawText.value
+
+  console.log('Text to use:', textToUse) // Verificar el valor real
+
+  if (!textToUse?.trim()) return
 
   if (taskStore.editingTaskId) {
-    console.log('aqio')
-    console.log('asd')
+    const metadata = {
+      rawText: textToUse,
+      categories: [...new Set(textToUse.match(/#(\w+)/g) || [])],
+      users: [...new Set(textToUse.match(/@(\w+)/g) || [])],
+      emails: [...new Set(textToUse.match(/(\S+@\S+\.\S+)/g) || [])],
+      urls: [...new Set(textToUse.match(/(https?:\/\/[^\s]+)/g) || [])],
+    }
+
     taskStore.updateTask(taskStore.editingTaskId, {
-      text: taskStore.editableText,
+      text: textToUse.trim(),
+      metadata,
     })
   } else {
-    // Modo creación
-    taskStore.addTask(taskText.value)
+    taskStore.addTask(textToUse)
   }
-
-  // Resetear estado
-  taskText.value = ''
-  taskStore.clearEditing()
 }
 </script>
