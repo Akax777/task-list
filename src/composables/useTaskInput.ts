@@ -36,7 +36,8 @@ export const useTaskInput = (taskStore: any, authStore: any) => {
     const metadata = {
       rawText: rawText.value,
       categories: [...new Set(rawText.value.match(/#(\w+)/g))],
-      users: [...new Set(rawText.value.match(/@(\w+)/g))],
+      // Nueva regex mejorada para usuarios
+      users: [...new Set(rawText.value.match(/(?:^|\s)@(\w+)/g))].map((m) => m.trim()),
       emails: [...new Set(rawText.value.match(/(\S+@\S+\.\S+)/g))],
       urls: [...new Set(rawText.value.match(/(https?:\/\/[^\s]+)/g))],
     }

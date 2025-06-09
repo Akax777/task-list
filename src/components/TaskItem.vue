@@ -5,6 +5,7 @@
     @click="startEditing"
   >
     <button
+      data-testid="complete-button"
       @click.stop="toggleComplete"
       class="w-6 h-6 border flex items-center justify-center transition-colors rounded-sm"
       :class="{
@@ -54,12 +55,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import { useAuthStore } from '@/stores/authStore'
 import { storeToRefs } from 'pinia'
 import { useTextParser } from '@/composables/useTextParser'
-import CheckIcon from './icons/CheckIcon.vue'
+import CheckIcon from '@/components/icons/CheckIcon.vue'
 
 const props = defineProps({
   task: {
@@ -80,13 +81,31 @@ const auth = useAuthStore()
 const isEditing = computed(() => taskStore.editingTaskId === props.task.id)
 const { editableText } = storeToRefs(taskStore)
 const inputRef = ref<HTMLInputElement | null>(null)
+const windowWidth = ref(window.innerWidth)
+
+// Actualizar el ancho de la ventana cuando cambia
+const updateWindowWidth = () => {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+  window.addEventListener('resize', updateWindowWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWindowWidth)
+})
 
 // Texto parseado para visualización normal
-const parsedDisplayText = computed(() => parseDisplayText(props.task.text))
+const parsedDisplayText = computed(() => {
+  const forceEditMode = windowWidth.value < 1230
+  return parseDisplayText(props.task.text, forceEditMode)
+})
 
 // Texto parseado para modo edición
 const editableHtml = computed(() => parseEditableText(editableText.value))
 
+// Resto de los métodos permanecen igual
 const toggleComplete = () => {
   taskStore.toggleComplete(props.task.id)
   taskStore.clearEditing()

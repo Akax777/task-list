@@ -8,25 +8,26 @@
         <PlusIcon />
       </button>
 
-      <div class="relative flex-1 flex items-center">
+      <div class="relative flex-1 flex items-center min-w-0">
         <div class="relative h-[40px] flex-grow">
           <input
+            data-testid="task-input"
             ref="inputRef"
             v-model="rawText"
             @focus="handleFocus"
             @blur="handleBlur"
             @keydown.enter="handleConfirm"
-            maxlength="200"
+            maxlength="100"
             class="w-full bg-transparent text-transparent caret-blue-500 outline-none text-lg absolute top-0 left-0"
           />
           <div
-            class="absolute top-0 left-0 w-full pointer-events-none text-lg"
+            class="absolute top-0 left-0 w-full pointer-events-none text-lg whitespace-nowrap overflow-hidden text-ellipsis"
             v-html="displayHtml"
             @click="focusInput"
           ></div>
           <div
             v-if="!rawText"
-            class="absolute top-0 left-0 w-full pointer-events-none text-gray-400 text-lg"
+            class="absolute top-0 left-0 w-full pointer-events-none text-gray-400 text-lg whitespace-nowrap overflow-hidden text-ellipsis"
             @click="focusInput"
           >
             Type to add new task
@@ -34,7 +35,7 @@
         </div>
 
         <div class="ml-2">
-          <UserAvatar v-if="isFocused" :user="auth.user" :has-text="!!rawText" />
+          <UserAvatar v-if="isFocused || !!rawText" :user="auth.user" :has-text="!!rawText" />
         </div>
       </div>
     </div>

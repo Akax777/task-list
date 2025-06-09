@@ -41,10 +41,6 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const editingTaskId = ref<string | null>(null)
   const editableText = ref('')
-  watch(editableText, (newVal) => {
-    console.log('editableText changed in store:', newVal)
-  })
-
   // Getters
   const hasTasks = computed(() => tasks.value.length > 0)
   const completedTasks = computed(() => tasks.value.filter((task) => task.completed))
@@ -60,10 +56,10 @@ export const useTaskStore = defineStore('tasks', () => {
       createdAt: new Date(),
       metadata: metadata || {
         rawText: text,
-        categories: [],
-        users: [],
-        emails: [],
-        urls: [],
+        categories: [...new Set(text.match(/#(\w+)/g) || [])],
+        users: [...new Set((text.match(/(^|\s)@(\w+)/g) || []).map((u) => u.trim()))], // Cambio clave
+        emails: [...new Set(text.match(/(\S+@\S+\.\S+)/g) || [])],
+        urls: [...new Set(text.match(/(https?:\/\/[^\s]+)/g) || [])],
       },
     }
     tasks.value.unshift(newTask)
@@ -84,6 +80,7 @@ export const useTaskStore = defineStore('tasks', () => {
     const task = tasks.value.find((t) => t.id === id)
     if (task) {
       task.completed = !task.completed
+      console.log(task)
     }
   }
 

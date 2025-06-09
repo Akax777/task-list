@@ -1,6 +1,5 @@
-// stores/auth.ts
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue' // Añade computed
 
 interface User {
   id: string
@@ -12,28 +11,24 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const isLoading = ref(false)
 
-  // Simula login con API
+  // Añade esta propiedad computada
+  const isAuthenticated = computed(() => !!user.value)
+
   const login = async () => {
     isLoading.value = true
     try {
-      // Simulamos delay de red
       await new Promise((resolve) => setTimeout(resolve, 800))
-
-      // Datos simulados como si vinieran de una API real
       user.value = {
         id: 'usr_123',
         name: 'Usuario Demo',
-        avatar: `https://i.pravatar.cc/150?u=usr_12`, // Avatar único basado en ID
+        avatar: `https://i.pravatar.cc/150?u=usr_12`,
       }
-
-      // Simulamos persistencia en localStorage
       localStorage.setItem('user', JSON.stringify(user.value))
     } finally {
       isLoading.value = false
     }
   }
 
-  // Cargar usuario al iniciar (como si validáramos sesión)
   const initialize = () => {
     const savedUser = localStorage.getItem('user')
     if (savedUser) {
@@ -43,5 +38,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, isLoading, login, initialize }
+  const logout = () => {
+    user.value = null
+    localStorage.removeItem('user')
+  }
+
+  return {
+    user,
+    isLoading,
+    isAuthenticated, // Exporta la nueva propiedad
+    login,
+    logout,
+    initialize,
+  }
 })
