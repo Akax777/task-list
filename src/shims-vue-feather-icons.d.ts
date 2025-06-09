@@ -1,6 +1,6 @@
-declare module 'vue-feather-icons' {
+// src/shims-vue.d.ts
+declare module '*.vue' {
   import { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, any>
-  export * from 'vue-feather-icons'
   export default component
 }
