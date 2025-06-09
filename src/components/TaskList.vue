@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-2">
-    <TaskItem v-for="task in tasks" :key="task.id" :task="task" />
+    <TaskItem v-for="task in tasks" :key="task.id" :task="task" data-test="taskItems" />
   </div>
 </template>
 

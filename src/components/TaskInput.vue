@@ -1,39 +1,41 @@
 <template>
   <div class="sticky top-0 z-10 pt-1 bg-white">
-    <div class="bg-white flex gap-2 pt-3 px-4 pb-6" :class="isFocused ? 'shadow' : null">
+    <div class="bg-white flex gap-2 pt-3 px-4 pb-5 mb-3" :class="isFocused ? 'shadow' : null">
       <button
-        class="text-blue-600 rounded-full w-8 h-8 flex items-center justify-center shrink-0"
+        class="text-blue-500 rounded-full w-8 h-8 flex items-center justify-center shrink-0"
         @click="focusInput"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24">
-          <path
-            fill="#0891b2"
-            d="M19 19V5H5v14zm0-16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm-8 4h2v4h4v2h-4v4h-2v-4H7v-2h4z"
-          />
-        </svg>
+        <PlusIcon />
       </button>
 
-      <div class="relative flex-1">
-        <input
-          ref="inputRef"
-          v-model="taskText"
-          @focus="handleFocus"
-          @blur="handleBlur"
-          @keydown.enter="handleConfirm"
-          placeholder="Type to add new task"
-          class="w-full h-full focus:outline-none focus:border-blue-500 transition-colors caret-blue-500 tracking-wide text-lg"
-        />
-        <div
-          v-if="isFocused"
-          class="absolute right-0 top-1/2 transform -translate-y-1/2 w-8 h-8 rounded-full bg-gray-300 overflow-hidden transition-opacity duration-300"
-          :class="{ 'opacity-50': !taskText, 'opacity-100': taskText }"
-        >
-          <img
-            v-if="auth.user?.avatar"
-            :src="auth.user.avatar"
-            :alt="auth.user.name"
-            class="w-8 h-8 rounded-full object-cover"
+      <div class="relative flex-1 flex items-center min-w-0">
+        <div class="relative h-[40px] flex-grow">
+          <input
+            data-testid="task-input"
+            ref="inputRef"
+            v-model="rawText"
+            @focus="handleFocus"
+            @blur="handleBlur"
+            @keydown.enter="handleConfirm"
+            maxlength="100"
+            class="w-full bg-transparent text-transparent caret-blue-500 outline-none text-lg absolute top-0 left-0"
           />
+          <div
+            class="absolute top-0 left-0 w-full pointer-events-none text-lg whitespace-nowrap overflow-hidden text-ellipsis"
+            v-html="displayHtml"
+            @click="focusInput"
+          ></div>
+          <div
+            v-if="!rawText"
+            class="absolute top-0 left-0 w-full pointer-events-none text-gray-400 text-lg whitespace-nowrap overflow-hidden text-ellipsis"
+            @click="focusInput"
+          >
+            Type to add new task
+          </div>
+        </div>
+
+        <div class="ml-2">
+          <UserAvatar v-if="isFocused || !!rawText" :user="auth.user" :has-text="!!rawText" />
         </div>
       </div>
     </div>
@@ -41,58 +43,54 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useTaskStore } from '@/stores/taskStore'
-import { storeToRefs } from 'pinia'
+import { useTaskInput } from '@/composables/useTaskInput'
+import PlusIcon from './icons/PlusIcon.vue'
+import UserAvatar from './UserAvatar.vue'
 
 const auth = useAuthStore()
-console.log(auth.user)
 const taskStore = useTaskStore()
-const inputRef = ref<HTMLInputElement | null>(null)
-const { taskText } = storeToRefs(taskStore)
 
-const isFocused = computed(() => taskStore.isInputFocused)
-
-watch(
-  () => taskStore.editingTask,
-  (task) => {
-    if (task) {
-      taskText.value = task.text
-      focusInput()
-    } else {
-      taskText.value = ''
-    }
-  },
-)
-
-const focusInput = () => {
-  inputRef.value?.focus()
-  taskStore.isInputFocused = true
-}
-
-const handleFocus = () => {
-  taskStore.isInputFocused = true
-}
-
-const handleBlur = () => {
-  if (!taskText.value) {
-    taskStore.isInputFocused = false
-  }
-}
-
-const handleConfirm = () => {
-  if (!taskText.value.trim()) return
-
-  if (taskStore.editingTask) {
-    taskStore.updateTask(taskStore.editingTask.id, { text: taskText.value })
-  } else {
-    taskStore.addTask(taskText.value)
-  }
-  taskText.value = ''
-
-  inputRef.value?.blur() // Esto deseleccionará el input
-  taskStore.isInputFocused = false
-  taskStore.editingTask = null
-}
+const {
+  inputRef,
+  rawText,
+  displayHtml,
+  isFocused,
+  focusInput,
+  handleFocus,
+  handleBlur,
+  handleConfirm,
+} = useTaskInput(taskStore, auth)
 </script>
+
+<style>
+.text-category,
+.text-user,
+.text-email,
+.text-url {
+  display: inline;
+  position: relative;
+}
+
+.text-category {
+  color: #724db6;
+}
+
+.text-user {
+  color: #3e8e73;
+}
+
+.text-email {
+  color: #e7a958;
+}
+
+.text-url {
+  color: #7cbaf6;
+}
+
+.relative > div {
+  line-height: 1.5;
+  padding: 0.25rem 0;
+}
+</style>
